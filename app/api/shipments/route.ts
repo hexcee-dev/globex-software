@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { list } from "@/lib/db/shipments";
 import { isAuthenticated } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 const DEFAULT_PAGE_SIZE = 10;
 const MAX_PAGE_SIZE = 10000;
 

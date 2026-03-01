@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { clearAll } from "@/lib/db/shipments";
 import { isAuthenticated } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 export async function POST() {
   try {
     const auth = await isAuthenticated();

@@ -3,6 +3,8 @@ import { insertMany } from "@/lib/db/shipments";
 import { isAuthenticated } from "@/lib/auth";
 import * as XLSX from "xlsx";
 
+export const dynamic = "force-dynamic";
+
 const COURIERS = ["Delhivery", "DP World"];
 
 export async function POST(request: NextRequest) {

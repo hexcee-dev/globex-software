@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { insertMany } from "@/lib/db/shipments";
 import { isAuthenticated } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 type ShipmentRow = {
   shipmentNumber: string;
   courierPartner: string;
