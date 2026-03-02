@@ -7,10 +7,10 @@ const SESSION_COOKIE = String(process.env.SESSION_COOKIE);
 export function getTrackingUrl(courierPartner: string, trackingNumber: string): string {
   if (!courierPartner?.trim() || !trackingNumber || trackingNumber.startsWith("REF:")) return "#";
   if (courierPartner === "Delhivery") {
-    return `https://www.delhivery.com/track/package/${trackingNumber}`;
+    return `https://www.delhivery.com/track-v2/lr/${trackingNumber}`;
   }
   if (courierPartner === "DP World") {
-    return `https://www.dpworld.com/track?reference=${trackingNumber}`;
+    return `https://www.logistics.dpworld.com/tracking/in/express?shipment=${trackingNumber}`;
   }
   return "#";
 }

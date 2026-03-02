@@ -383,6 +383,29 @@ export async function updateNotes(
   return mapRefToRecord(ref as unknown as RefLike, (shipment as ShipmentInfo) ?? null);
 }
 
+export async function updateTrackingAndCourier(
+  id: string,
+  data: { trackingNumber?: string; courierPartner?: string }
+): Promise<ShipmentRecord | null> {
+  const Ref = getRefModel();
+  const Shipment = getShipmentModel();
+  const ref = await Ref.findById(id).exec();
+  if (!ref) return null;
+  const rawTracking = data.trackingNumber !== undefined ? String(data.trackingNumber).trim() : null;
+  const nextTracking = rawTracking !== null ? (rawTracking || ref.trackingNumber) : ref.trackingNumber;
+  const nextCourier =
+    data.courierPartner !== undefined ? String(data.courierPartner).trim() : ref.courierPartner;
+  const trackingUrl = getTrackingUrl(nextCourier, nextTracking);
+  const updated = await Ref.findByIdAndUpdate(
+    id,
+    { trackingNumber: nextTracking, courierPartner: nextCourier, trackingUrl },
+    { new: true }
+  ).exec();
+  if (!updated) return null;
+  const shipment = await Shipment.findById(updated.shipmentId).lean().exec();
+  return mapRefToRecord(updated as unknown as RefLike, (shipment as ShipmentInfo) ?? null);
+}
+
 export async function deleteById(id: string): Promise<boolean> {
   const Ref = getRefModel();
   const res = await Ref.findByIdAndDelete(id).exec();

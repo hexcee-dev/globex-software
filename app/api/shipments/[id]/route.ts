@@ -3,6 +3,7 @@ import {
   updateStatus,
   updateDeliveredDate,
   updateNotes,
+  updateTrackingAndCourier,
   deleteById,
 } from "@/lib/db/shipments";
 import { isAuthenticated } from "@/lib/auth";
@@ -23,7 +24,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
     }
     const body = await request.json();
-    const { currentStatus, deliveredDate, notes } = body;
+    const { currentStatus, deliveredDate, notes, trackingNumber, courierPartner } = body;
 
     let updated = null;
     if (typeof currentStatus === "string" && currentStatus.trim()) {
@@ -37,14 +38,25 @@ export async function PATCH(
         (await updateNotes(id, typeof notes === "string" ? notes : String(notes))) ??
         updated;
     }
+    if (trackingNumber !== undefined || courierPartner !== undefined) {
+      updated =
+        (await updateTrackingAndCourier(id, {
+          ...(trackingNumber !== undefined && { trackingNumber: String(trackingNumber) }),
+          ...(courierPartner !== undefined && { courierPartner: String(courierPartner) }),
+        })) ?? updated;
+    }
     if (!updated) {
-      if (typeof currentStatus !== "string" || !currentStatus?.trim()) {
-        if (notes === undefined && !deliveredDate) {
-          return NextResponse.json(
-            { error: "Provide currentStatus, deliveredDate, or notes" },
-            { status: 400 }
-          );
-        }
+      const hasUpdate =
+        (typeof currentStatus === "string" && currentStatus.trim()) ||
+        (typeof deliveredDate === "string" && deliveredDate.trim()) ||
+        notes !== undefined ||
+        trackingNumber !== undefined ||
+        courierPartner !== undefined;
+      if (!hasUpdate) {
+        return NextResponse.json(
+          { error: "Provide currentStatus, deliveredDate, notes, trackingNumber, or courierPartner" },
+          { status: 400 }
+        );
       }
       return NextResponse.json({ error: "Shipment not found" }, { status: 404 });
     }

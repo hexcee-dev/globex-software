@@ -138,6 +138,28 @@ export default function ShipmentDetailPage() {
     [fetchBoxes, showToast]
   );
 
+  const handleTrackingCourierChange = useCallback(
+    async (id: string, data: { trackingNumber?: string; courierPartner?: string }) => {
+      try {
+        const body: { trackingNumber?: string; courierPartner?: string } = {};
+        if (data.trackingNumber !== undefined) body.trackingNumber = data.trackingNumber;
+        if (data.courierPartner !== undefined) body.courierPartner = data.courierPartner;
+        if (Object.keys(body).length === 0) return;
+        const res = await fetch(`/api/shipments/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) throw new Error("Update failed");
+        showToast("success", "Tracking / courier updated");
+        fetchBoxes();
+      } catch {
+        showToast("error", "Failed to update tracking or courier");
+      }
+    },
+    [fetchBoxes, showToast]
+  );
+
   if (!shipmentNumber) {
     return (
       <div className="p-6">
@@ -197,6 +219,7 @@ export default function ShipmentDetailPage() {
               onStatusUpdate={handleStatusUpdate}
               onDeliveredDateChange={handleDeliveredDateChange}
               onNotesChange={handleNotesChange}
+              onTrackingCourierChange={handleTrackingCourierChange}
               onDelete={handleDelete}
             />
           </div>

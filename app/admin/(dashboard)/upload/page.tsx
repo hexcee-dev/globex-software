@@ -123,19 +123,12 @@ function parsePaste(text: string): { rows: Record<string, string>[]; errors: str
 
     const refNoVal = isYourFormat && idxRefNo >= 0 ? (row[idxRefNo] || "").trim() : "";
     if (!trackingNumber && !refNoVal) {
-      errors.push(`Row ${r + 1}: missing Docket No / tracking number (REF NO required if no tracking)`);
+      errors.push(`Row ${r + 1}: REF NO or Docket No / tracking number is required`);
       continue;
     }
-    if (!courierPartner || !["Delhivery", "DP World"].includes(courierPartner)) {
-      errors.push(`Row ${r + 1}: could not detect Delhivery or DP World in Carrier & Date`);
-      continue;
-    }
-    if (!shipmentDate) {
-      errors.push(`Row ${r + 1}: could not parse date from Carrier & Date (use DD.MM.YY)`);
-      continue;
-    }
-    if (!shipmentNumber) shipmentNumber = "RAUFF AIR 110";
+    if (!shipmentDate) shipmentDate = new Date().toISOString().slice(0, 10);
     if (!expectedDeliveryDate) expectedDeliveryDate = shipmentDate;
+    if (!shipmentNumber) shipmentNumber = "RAUFF AIR 110";
 
     const addressVal = isYourFormat && idxAddress >= 0 ? (row[idxAddress] || "").trim() : "";
     rows.push({

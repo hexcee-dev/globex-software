@@ -18,6 +18,8 @@ type ShipmentRow = {
   deliveryPartnerLabel?: string;
 };
 
+const DEFAULT_DATE = new Date().toISOString().slice(0, 10);
+
 type BulkOverrides = {
   clearanceDate?: string;
   shipment?: string;
@@ -43,13 +45,6 @@ export async function POST(request: NextRequest) {
 
     const docs: ShipmentRow[] = [];
     const errors: string[] = [];
-    const requiredExceptTracking = [
-      "shipmentNumber",
-      "courierPartner",
-      "shipmentDate",
-      "currentStatus",
-      "expectedDeliveryDate",
-    ] as const;
 
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i] as Record<string, unknown>;
@@ -57,29 +52,26 @@ export async function POST(request: NextRequest) {
         errors.push(`Row ${i + 1}: invalid row`);
         continue;
       }
-      const missing = requiredExceptTracking.filter((k) => r[k] == null || String(r[k]).trim() === "");
-      if (missing.length) {
-        errors.push(`Row ${i + 1}: missing ${missing.join(", ")}`);
-        continue;
-      }
       const refNo = r.refNo != null ? String(r.refNo).trim() || undefined : undefined;
       const trackingRaw = r.trackingNumber != null ? String(r.trackingNumber).trim() : "";
       if (!trackingRaw && !refNo) {
-        errors.push(`Row ${i + 1}: tracking number or REF NO (box number) is required`);
+        errors.push(`Row ${i + 1}: REF NO (box number) or tracking number is required`);
         continue;
       }
-      let shipmentNumber = String(r.shipmentNumber).trim();
+      let shipmentNumber = (overrides.shipmentName?.trim() || String(r.shipmentNumber ?? "").trim()) || "Unknown";
       const courierPartner = String(r.courierPartner ?? "").trim();
-      if (overrides.shipmentName?.trim()) shipmentNumber = overrides.shipmentName.trim();
+      const shipmentDate = String(r.shipmentDate ?? "").trim() || DEFAULT_DATE;
+      const expectedDeliveryDate = String(r.expectedDeliveryDate ?? "").trim() || shipmentDate;
+      const currentStatus = String(r.currentStatus ?? "").trim() || "Booked";
       const trackingNumber = trackingRaw || (refNo ? `REF:${refNo}:${i}` : "");
       const deliveryPartnerLabel = overrides.deliveryPartner != null && String(overrides.deliveryPartner).trim() !== "" ? String(overrides.deliveryPartner).trim() : undefined;
       docs.push({
         shipmentNumber,
         courierPartner,
-        shipmentDate: String(r.shipmentDate).trim(),
+        shipmentDate,
         trackingNumber,
-        currentStatus: String(r.currentStatus).trim(),
-        expectedDeliveryDate: String(r.expectedDeliveryDate).trim(),
+        currentStatus,
+        expectedDeliveryDate,
         refNo,
         address: r.address != null ? String(r.address).trim() || undefined : undefined,
         clearanceDate: overrides.clearanceDate != null && String(overrides.clearanceDate).trim() ? String(overrides.clearanceDate).trim() : (r.clearanceDate != null ? String(r.clearanceDate).trim() || undefined : undefined),
