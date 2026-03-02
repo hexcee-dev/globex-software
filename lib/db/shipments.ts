@@ -52,7 +52,7 @@ const RefSchema = new Schema<RefDoc>(
     refNo: { type: String },
     trackingNumber: { type: String, required: true, unique: true },
     trackingUrl: { type: String, required: true },
-    courierPartner: { type: String, required: true },
+    courierPartner: { type: String },
     shipmentDate: { type: Date, required: true },
     expectedDeliveryDate: { type: Date, required: true },
     currentStatus: { type: String, required: true },

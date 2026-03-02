@@ -16,7 +16,7 @@ export interface IShipment {
 const shipmentSchema = new mongoose.Schema<IShipment>(
   {
     shipmentNumber: { type: String, required: true },
-    courierPartner: { type: String, required: true },
+    courierPartner: { type: String, required: false },
     shipmentDate: { type: Date, required: true },
     trackingNumber: { type: String, required: true, unique: true },
     trackingUrl: { type: String, required: true },
