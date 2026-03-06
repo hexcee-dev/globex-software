@@ -17,12 +17,14 @@ export default function NavBar() {
     };
   }, [menuOpen]);
 
+  const headerHeight = "56px";
+
   return (
     <motion.nav
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="bg-white/95 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50 shadow-sm"
+      className="bg-white/95 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50 shadow-sm pt-[env(safe-area-inset-top)]"
     >
       <div className="container mx-auto flex justify-between items-center px-4 py-3 sm:px-6 min-h-[56px] md:min-h-0">
         <Link
@@ -73,7 +75,7 @@ export default function NavBar() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="fixed inset-0 bg-black/40 z-40 md:hidden"
+              className="fixed inset-0 bg-black/40 z-[45] md:hidden"
               onClick={() => setMenuOpen(false)}
               aria-hidden="true"
             />
@@ -82,24 +84,30 @@ export default function NavBar() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: "100%" }}
               transition={{ type: "tween", duration: 0.25 }}
-              className="fixed top-0 right-0 bottom-0 w-full max-w-[280px] bg-white shadow-xl z-50 md:hidden flex flex-col pt-[72px] px-5 pb-[max(2rem,env(safe-area-inset-bottom))]"
+              className="fixed right-0 bottom-0 w-[min(280px,100vw-24px)] max-w-full bg-white shadow-xl z-50 md:hidden flex flex-col border-l border-gray-200"
+              style={{
+                top: `calc(${headerHeight} + env(safe-area-inset-top, 0px))`,
+                paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))",
+              }}
             >
-              <nav className="flex flex-col gap-2 px-1" aria-label="Main">
-                <Link
-                  href="/"
-                  className="flex items-center gap-3 min-h-[48px] py-3 px-4 rounded-xl text-gray-800 hover:bg-gray-100 font-medium active:bg-gray-100"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  <Home size={22} aria-hidden /> Home
-                </Link>
-                <Link
-                  href="/admin"
-                  className="flex items-center gap-3 min-h-[48px] py-3 px-4 rounded-xl text-gray-700 hover:bg-gray-100 font-medium active:bg-gray-100"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  Admin
-                </Link>
-              </nav>
+              <div className="flex-1 overflow-y-auto pt-5 px-4">
+                <nav className="flex flex-col gap-1" aria-label="Main">
+                  <Link
+                    href="/"
+                    className="flex items-center gap-3 min-h-[48px] py-3 px-4 rounded-xl text-gray-800 hover:bg-gray-100 font-medium active:bg-gray-100"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    <Home size={22} aria-hidden /> Home
+                  </Link>
+                  <Link
+                    href="/admin"
+                    className="flex items-center gap-3 min-h-[48px] py-3 px-4 rounded-xl text-gray-700 hover:bg-gray-100 font-medium active:bg-gray-100"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    Admin
+                  </Link>
+                </nav>
+              </div>
             </motion.div>
           </>
         )}
