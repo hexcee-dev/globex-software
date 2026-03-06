@@ -24,7 +24,7 @@ export default function NavBar() {
       transition={{ duration: 0.4 }}
       className="bg-white/95 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50 shadow-sm"
     >
-      <div className="container mx-auto flex justify-between items-center px-4 py-3 sm:px-6">
+      <div className="container mx-auto flex justify-between items-center px-4 py-3 sm:px-6 min-h-[56px] md:min-h-0">
         <Link
           href="/"
           className="flex items-center gap-2 min-h-[44px] min-w-[44px] -m-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
@@ -41,7 +41,7 @@ export default function NavBar() {
 
         <button
           type="button"
-          className="md:hidden touch-target rounded-lg p-2 -m-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+          className="md:hidden min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors -mr-1"
           onClick={() => setMenuOpen(!menuOpen)}
           aria-label={menuOpen ? "Close menu" : "Open menu"}
           aria-expanded={menuOpen}
@@ -82,22 +82,24 @@ export default function NavBar() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: "100%" }}
               transition={{ type: "tween", duration: 0.25 }}
-              className="fixed top-0 right-0 bottom-0 w-full max-w-[280px] bg-white shadow-xl z-50 md:hidden flex flex-col pt-20 pb-8 px-6"
+              className="fixed top-0 right-0 bottom-0 w-full max-w-[280px] bg-white shadow-xl z-50 md:hidden flex flex-col pt-[72px] px-5 pb-[max(2rem,env(safe-area-inset-bottom))]"
             >
-              <Link
-                href="/"
-                className="flex items-center gap-3 py-4 px-3 rounded-xl text-gray-800 hover:bg-gray-100 font-medium touch-target-inline"
-                onClick={() => setMenuOpen(false)}
-              >
-                <Home size={22} /> Home
-              </Link>
-              <Link
-                href="/admin"
-                className="flex items-center gap-3 py-4 px-3 rounded-xl text-gray-700 hover:bg-gray-100 touch-target-inline"
-                onClick={() => setMenuOpen(false)}
-              >
-                Admin
-              </Link>
+              <nav className="flex flex-col gap-2 px-1" aria-label="Main">
+                <Link
+                  href="/"
+                  className="flex items-center gap-3 min-h-[48px] py-3 px-4 rounded-xl text-gray-800 hover:bg-gray-100 font-medium active:bg-gray-100"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  <Home size={22} aria-hidden /> Home
+                </Link>
+                <Link
+                  href="/admin"
+                  className="flex items-center gap-3 min-h-[48px] py-3 px-4 rounded-xl text-gray-700 hover:bg-gray-100 font-medium active:bg-gray-100"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Admin
+                </Link>
+              </nav>
             </motion.div>
           </>
         )}

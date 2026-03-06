@@ -11,6 +11,7 @@ export type TrackShipmentResult = {
   trackingUrl: string;
   currentStatus: string;
   expectedDeliveryDate: Date;
+  deliveredDate?: Date;
   notes?: string;
 };
 
@@ -29,6 +30,7 @@ export async function getShipmentByTrackingNumber(
     trackingUrl: doc.trackingUrl,
     currentStatus: doc.currentStatus,
     expectedDeliveryDate: doc.expectedDeliveryDate,
+    deliveredDate: doc.deliveredDate ?? undefined,
     notes: doc.notes ?? undefined,
   };
 }

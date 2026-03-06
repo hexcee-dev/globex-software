@@ -33,16 +33,16 @@ export default function AdminSidebar() {
   return (
     <>
       {/* Mobile: top bar + overlay menu */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-admin-card border-b border-admin-border text-white flex items-center justify-between px-4 z-50 shadow-admin-card">
-        <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-xl bg-admin-accent/20 flex items-center justify-center">
+      <div className="lg:hidden fixed top-0 left-0 right-0 min-h-[56px] pt-[env(safe-area-inset-top)] bg-admin-card border-b border-admin-border text-white flex items-center justify-between px-4 z-50 shadow-admin-card">
+        <div className="flex items-center gap-2 min-h-14">
+          <div className="w-9 h-9 rounded-xl bg-admin-accent/20 flex items-center justify-center shrink-0">
             <Package className="text-admin-accent" size={20} />
           </div>
-          <span className="font-semibold">Globex Admin</span>
+          <span className="font-semibold truncate">Globex Admin</span>
         </div>
         <button
           type="button"
-          className="p-2 rounded-xl hover:bg-white/10 transition-colors"
+          className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl hover:bg-white/10 transition-colors -mr-1"
           onClick={() => setOpen(!open)}
           aria-label={open ? "Close menu" : "Open menu"}
         >
@@ -65,9 +65,10 @@ export default function AdminSidebar() {
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "tween", duration: 0.2 }}
-              className="fixed top-14 left-0 bottom-0 w-64 bg-admin-card border-r border-admin-border z-40 lg:hidden shadow-admin-card flex flex-col pt-6 pb-8"
+              className="fixed top-14 left-0 bottom-0 w-[min(16rem,85vw)] max-w-[280px] bg-admin-card border-r border-admin-border z-40 lg:hidden shadow-admin-card flex flex-col pt-5 pb-[max(2rem,env(safe-area-inset-bottom))]"
+              style={{ top: "calc(3.5rem + env(safe-area-inset-top, 0px))" }}
             >
-              <nav className="flex-1 px-3 space-y-1">
+              <nav className="flex-1 px-3 flex flex-col gap-2 overflow-y-auto" aria-label="Admin menu">
                 {links.map(({ href, label, icon: Icon }) => {
                   const active = pathname === href || (href !== "/admin" && pathname.startsWith(href));
                   return (
@@ -75,23 +76,23 @@ export default function AdminSidebar() {
                       key={href}
                       href={href}
                       onClick={() => setOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${
+                      className={`flex items-center gap-3 min-h-[48px] px-4 py-3 rounded-xl font-medium transition-all ${
                         active
                           ? "bg-admin-accent text-admin-bg shadow-admin-glow"
-                          : "text-slate-400 hover:bg-white/10 hover:text-white"
+                          : "text-slate-400 hover:bg-white/10 hover:text-white active:bg-white/15"
                       }`}
                     >
-                      <Icon size={20} /> {label}
+                      <Icon size={20} aria-hidden /> {label}
                     </Link>
                   );
                 })}
               </nav>
-              <form action="/api/auth/logout" method="POST" className="px-3 pt-4 border-t border-admin-border">
+              <form action="/api/auth/logout" method="POST" className="px-3 pt-4 mt-auto border-t border-admin-border shrink-0">
                 <button
                   type="submit"
-                  className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-slate-400 hover:bg-white/10 hover:text-white transition-colors"
+                  className="flex items-center gap-3 w-full min-h-[48px] px-4 py-3 rounded-xl text-slate-400 hover:bg-white/10 hover:text-white transition-colors"
                 >
-                  <LogOut size={20} /> Logout
+                  <LogOut size={20} aria-hidden /> Logout
                 </button>
               </form>
             </motion.aside>

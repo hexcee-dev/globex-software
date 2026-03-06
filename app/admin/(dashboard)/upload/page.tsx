@@ -39,17 +39,56 @@ function parseCarrierAndDate(val: string): { carrier: string; date: string } {
   return { carrier: outCarrier, date: "" };
 }
 
+/** Split text into rows, respecting quoted fields that may contain newlines (Excel-style). */
+function splitRowsQuoted(text: string): string[] {
+  const rows: string[] = [];
+  let current = "";
+  let inQuote = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (c === '"') {
+      inQuote = !inQuote;
+      current += c;
+    } else if ((c === "\n" || c === "\r") && !inQuote) {
+      if (c === "\r" && text[i + 1] === "\n") i++;
+      if (current.trim()) rows.push(current);
+      current = "";
+    } else {
+      current += c;
+    }
+  }
+  if (current.trim()) rows.push(current);
+  return rows;
+}
+
+/** Split one row into cells by delimiter, respecting quoted fields (Excel-style). */
+function splitRowQuoted(row: string, delimiter: string): string[] {
+  const cells: string[] = [];
+  let current = "";
+  let inQuote = false;
+  for (let i = 0; i < row.length; i++) {
+    const c = row[i];
+    if (c === '"') {
+      inQuote = !inQuote;
+      current += c;
+    } else if (c === delimiter && !inQuote) {
+      cells.push(current.trim().replace(/^"|"$/g, "").replace(/""/g, '"'));
+      current = "";
+    } else {
+      current += c;
+    }
+  }
+  cells.push(current.trim().replace(/^"|"$/g, "").replace(/""/g, '"'));
+  return cells;
+}
+
 function parsePaste(text: string): { rows: Record<string, string>[]; errors: string[] } {
   const errors: string[] = [];
-  const lines = text
-    .trim()
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
-  if (lines.length === 0) return { rows: [], errors: ["No data to parse."] };
+  const rowStrings = splitRowsQuoted(text.trim());
+  if (rowStrings.length === 0) return { rows: [], errors: ["No data to parse."] };
 
-  const delimiter = lines[0].includes("\t") ? "\t" : ",";
-  const rawRows = lines.map((line) => line.split(delimiter).map((c) => c.trim()));
+  const delimiter = rowStrings[0].includes("\t") ? "\t" : ",";
+  const rawRows = rowStrings.map((rowStr) => splitRowQuoted(rowStr, delimiter));
 
   const first = rawRows[0];
   const firstNorm = first.map((c) => normalizeHeader(c));
@@ -57,6 +96,12 @@ function parsePaste(text: string): { rows: Record<string, string>[]; errors: str
   const isYourFormat =
     firstNorm.some((h) => h.includes("refno") || h.includes("docket") || h.includes("carier") || h.includes("carrier")) &&
     firstNorm.some((h) => h.includes("shipment") || h.includes("docket"));
+
+  // Known layout: REF NO, PCS, CARRIER & DATE, DOCKET NO, AMOUNT, VENDOR, ADDRESS, CONTACT NO, DESCRIPTION, WEIGHT, SHIPMENT, AGENT
+  const knownLayoutIndices = first.length >= 10 && (
+    (firstNorm[0]?.includes("ref") || firstNorm[0] === "refno") &&
+    (firstNorm[3]?.includes("docket") || firstNorm[2]?.includes("carier") || firstNorm[2]?.includes("carrier"))
+  );
 
   let startIndex = 0;
   let idxRefNo = -1,
@@ -67,22 +112,30 @@ function parsePaste(text: string): { rows: Record<string, string>[]; errors: str
 
   if (isYourFormat && first.length >= 4) {
     startIndex = 1;
-    firstNorm.forEach((h, i) => {
-      if (
-        h.includes("refno") ||
-        h === "referenceno" ||
-        (h.startsWith("ref") && h.includes("no"))
-      )
-        idxRefNo = i;
-      if (h.includes("carier") || h.includes("carrier")) idxCarrierDate = i;
-      if (h.includes("docket")) idxDocketNo = i;
-      if (h.includes("shipment")) idxShipment = i;
-      if (h.includes("address")) idxAddress = i;
-    });
-    if (idxCarrierDate === -1) idxCarrierDate = 2;
-    if (idxDocketNo === -1) idxDocketNo = 3;
-    if (idxShipment === -1) idxShipment = first.length >= 11 ? 10 : 0;
-    if (idxRefNo === -1) idxRefNo = 0;
+    if (knownLayoutIndices) {
+      idxRefNo = 0;
+      idxCarrierDate = 2;
+      idxDocketNo = 3;
+      idxAddress = 6;
+      idxShipment = first.length >= 11 ? 10 : 0;
+    } else {
+      firstNorm.forEach((h, i) => {
+        if (
+          h.includes("refno") ||
+          h === "referenceno" ||
+          (h.startsWith("ref") && h.includes("no"))
+        )
+          idxRefNo = i;
+        if (h.includes("carier") || h.includes("carrier")) idxCarrierDate = i;
+        if (h.includes("docket")) idxDocketNo = i;
+        if (h.includes("shipment")) idxShipment = i;
+        if (h.includes("address")) idxAddress = i;
+      });
+      if (idxCarrierDate === -1) idxCarrierDate = 2;
+      if (idxDocketNo === -1) idxDocketNo = 3;
+      if (idxShipment === -1) idxShipment = first.length >= 11 ? 10 : 0;
+      if (idxRefNo === -1) idxRefNo = 0;
+    }
   }
 
   const rows: Record<string, string>[] = [];
@@ -122,10 +175,6 @@ function parsePaste(text: string): { rows: Record<string, string>[]; errors: str
     }
 
     const refNoVal = isYourFormat && idxRefNo >= 0 ? (row[idxRefNo] || "").trim() : "";
-    if (!trackingNumber && !refNoVal) {
-      errors.push(`Row ${r + 1}: REF NO or Docket No / tracking number is required`);
-      continue;
-    }
     if (!shipmentDate) shipmentDate = new Date().toISOString().slice(0, 10);
     if (!expectedDeliveryDate) expectedDeliveryDate = shipmentDate;
     if (!shipmentNumber) shipmentNumber = "RAUFF AIR 110";
@@ -138,8 +187,47 @@ function parsePaste(text: string): { rows: Record<string, string>[]; errors: str
       trackingNumber,
       currentStatus,
       expectedDeliveryDate,
-      refNo: refNoVal || "",
+      refNo: refNoVal || (trackingNumber ? "" : "Third party"),
       address: addressVal || "",
+    });
+  }
+  return { rows, errors };
+}
+
+/** Parse when user pastes one column per box (REF NO, DOCKET NO, ADDRESS, SHIPMENT). No tabs — one value per line. Avoids address newlines breaking REF NO. */
+function parseByColumn(
+  refNoCol: string,
+  docketCol: string,
+  addressCol: string,
+  shipmentCol: string,
+  carrierDateCol: string
+): { rows: Record<string, string>[]; errors: string[] } {
+  const errors: string[] = [];
+  const refLines = refNoCol.trim().split(/\r?\n/).map((l) => l.trim());
+  const docketLines = docketCol.trim().split(/\r?\n/).map((l) => l.trim());
+  const addressLines = addressCol.trim().split(/\r?\n/).map((l) => l.trim());
+  const shipmentLines = shipmentCol.trim().split(/\r?\n/).map((l) => l.trim());
+  const carrierLines = carrierDateCol.trim().split(/\r?\n/).map((l) => l.trim());
+  const n = Math.max(refLines.length, docketLines.length, addressLines.length, shipmentLines.length, carrierLines.length);
+  if (n === 0) return { rows: [], errors: ["Paste at least one column (one value per line)."] };
+  const rows: Record<string, string>[] = [];
+  const today = new Date().toISOString().slice(0, 10);
+  for (let i = 0; i < n; i++) {
+    const refNoVal = refLines[i] ?? "";
+    const docketVal = docketLines[i] ?? "";
+    const addressVal = addressLines[i] ?? "";
+    const shipmentVal = shipmentLines[i] ?? "";
+    const carrierVal = carrierLines[i] ?? "";
+    const { carrier, date } = parseCarrierAndDate(carrierVal);
+    rows.push({
+      refNo: refNoVal || (docketVal ? "" : "Third party"),
+      trackingNumber: docketVal,
+      address: addressVal,
+      shipmentNumber: shipmentVal || "AIR 114",
+      courierPartner: carrier || "Delhivery",
+      shipmentDate: date || today,
+      expectedDeliveryDate: date || today,
+      currentStatus: "Booked",
     });
   }
   return { rows, errors };
@@ -157,6 +245,15 @@ export default function BulkUploadPage() {
   const [bulkShipment, setBulkShipment] = useState("");
   const [bulkShipmentName, setBulkShipmentName] = useState("");
   const [bulkDeliveryPartner, setBulkDeliveryPartner] = useState("");
+  // Column-by-column paste
+  const [colRefNo, setColRefNo] = useState("");
+  const [colDocket, setColDocket] = useState("");
+  const [colAddress, setColAddress] = useState("");
+  const [colShipment, setColShipment] = useState("");
+  const [colCarrierDate, setColCarrierDate] = useState("");
+  const [colParsed, setColParsed] = useState<Record<string, string>[] | null>(null);
+  const [colParseErrors, setColParseErrors] = useState<string[]>([]);
+  const [activePasteMode, setActivePasteMode] = useState<"table" | "columns">("table");
 
   const showToast = (type: "success" | "error", message: string) => {
     setToast({ type, message });
@@ -165,13 +262,26 @@ export default function BulkUploadPage() {
 
   const handleParse = () => {
     setResult(null);
+    setColParsed(null);
+    setColParseErrors([]);
     const { rows, errors } = parsePaste(pasteText);
     setParseErrors(errors);
     setParsed(rows.length > 0 ? rows : null);
   };
 
+  const handleParseColumns = () => {
+    setResult(null);
+    setParsed(null);
+    setParseErrors([]);
+    const { rows, errors } = parseByColumn(colRefNo, colDocket, colAddress, colShipment, colCarrierDate);
+    setColParseErrors(errors);
+    setColParsed(rows.length > 0 ? rows : null);
+  };
+
+  const rowsToImport = activePasteMode === "columns" ? colParsed : parsed;
+
   const handleImportPaste = async () => {
-    if (!parsed || parsed.length === 0) return;
+    if (!rowsToImport || rowsToImport.length === 0) return;
     setLoading(true);
     setResult(null);
     const overrides: Record<string, string> = {};
@@ -183,7 +293,7 @@ export default function BulkUploadPage() {
       const res = await fetch("/api/shipments/bulk", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ shipments: parsed, overrides: Object.keys(overrides).length > 0 ? overrides : undefined }),
+        body: JSON.stringify({ shipments: rowsToImport, overrides: Object.keys(overrides).length > 0 ? overrides : undefined }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -196,6 +306,13 @@ export default function BulkUploadPage() {
       setPasteText("");
       setParsed(null);
       setParseErrors([]);
+      setColRefNo("");
+      setColDocket("");
+      setColAddress("");
+      setColShipment("");
+      setColCarrierDate("");
+      setColParsed(null);
+      setColParseErrors([]);
     } catch {
       showToast("error", "Something went wrong");
     } finally {
@@ -310,55 +427,130 @@ export default function BulkUploadPage() {
             <span className="font-semibold">Paste data</span>
           </div>
           <p className="text-slate-400 text-sm mt-2">
-            Copy your table from Excel and paste below. We support your usual format: <strong className="text-slate-300">REF NO</strong>, <strong className="text-slate-300">PCS</strong>, <strong className="text-slate-300">CARIER &amp; DATE</strong> (e.g. DELHIVERY -20.02.26), <strong className="text-slate-300">DOCKET NO</strong>, … <strong className="text-slate-300">SHIPMENT</strong> (e.g. RAUFF AIR 110), <strong className="text-slate-300">AGENT</strong>. First row = headers. Dates as DD.MM.YY.
+            {activePasteMode === "table"
+              ? "Copy your table from Excel and paste below. We support your usual format: REF NO, PCS, CARRIER & DATE, DOCKET NO, … SHIPMENT, AGENT. First row = headers. Addresses with line breaks are now supported."
+              : "Paste one column per box (one value per line). No headers. Use this when the table paste mixes up REF NO and ADDRESS."}
           </p>
+          <div className="flex gap-2 mt-3">
+            <button
+              type="button"
+              onClick={() => { setActivePasteMode("table"); setParsed(null); setColParsed(null); }}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium ${activePasteMode === "table" ? "bg-admin-accent text-admin-bg" : "bg-admin-border text-slate-400 hover:text-slate-200"}`}
+            >
+              Paste full table
+            </button>
+            <button
+              type="button"
+              onClick={() => { setActivePasteMode("columns"); setParsed(null); setColParsed(null); }}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium ${activePasteMode === "columns" ? "bg-admin-accent text-admin-bg" : "bg-admin-border text-slate-400 hover:text-slate-200"}`}
+            >
+              Paste column by column
+            </button>
+          </div>
         </div>
         <div className="p-5 sm:p-8 space-y-4">
-          <textarea
-            value={pasteText}
-            onChange={(e) => setPasteText(e.target.value)}
-            placeholder="Paste your Excel data here (with headers). Tab or comma separated."
-            className="w-full min-h-[180px] rounded-xl border border-admin-border px-4 py-3 text-sm font-mono bg-admin-bg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-admin-accent focus:border-admin-accent resize-y"
-            spellCheck={false}
-          />
+          {activePasteMode === "table" ? (
+            <textarea
+              value={pasteText}
+              onChange={(e) => setPasteText(e.target.value)}
+              placeholder="Paste your Excel data here (with headers). Tab or comma separated. Quoted fields with newlines are supported."
+              className="w-full min-h-[180px] rounded-xl border border-admin-border px-4 py-3 text-sm font-mono bg-admin-bg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-admin-accent focus:border-admin-accent resize-y"
+              spellCheck={false}
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-400 uppercase tracking-wide mb-1.5">REF NO (one per line)</label>
+                <textarea
+                  value={colRefNo}
+                  onChange={(e) => setColRefNo(e.target.value)}
+                  placeholder="JD810240\nJD810241\n..."
+                  className="w-full min-h-[100px] rounded-xl border border-admin-border px-3 py-2 text-sm font-mono bg-admin-bg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-admin-accent resize-y"
+                  spellCheck={false}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-400 uppercase tracking-wide mb-1.5">DOCKET NO (one per line)</label>
+                <textarea
+                  value={colDocket}
+                  onChange={(e) => setColDocket(e.target.value)}
+                  placeholder="300937798\n300937794\n..."
+                  className="w-full min-h-[100px] rounded-xl border border-admin-border px-3 py-2 text-sm font-mono bg-admin-bg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-admin-accent resize-y"
+                  spellCheck={false}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-400 uppercase tracking-wide mb-1.5">ADDRESS (one per line)</label>
+                <textarea
+                  value={colAddress}
+                  onChange={(e) => setColAddress(e.target.value)}
+                  placeholder="One full address per line..."
+                  className="w-full min-h-[100px] rounded-xl border border-admin-border px-3 py-2 text-sm font-mono bg-admin-bg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-admin-accent resize-y"
+                  spellCheck={false}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-400 uppercase tracking-wide mb-1.5">SHIPMENT (e.g. AIR 114)</label>
+                <textarea
+                  value={colShipment}
+                  onChange={(e) => setColShipment(e.target.value)}
+                  placeholder="AIR 114 (one per line)..."
+                  className="w-full min-h-[100px] rounded-xl border border-admin-border px-3 py-2 text-sm font-mono bg-admin-bg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-admin-accent resize-y"
+                  spellCheck={false}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-400 uppercase tracking-wide mb-1.5">CARRIER &amp; DATE (optional)</label>
+                <textarea
+                  value={colCarrierDate}
+                  onChange={(e) => setColCarrierDate(e.target.value)}
+                  placeholder="DELHIVERY -20.02.26 (optional)"
+                  className="w-full min-h-[100px] rounded-xl border border-admin-border px-3 py-2 text-sm font-mono bg-admin-bg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-admin-accent resize-y"
+                  spellCheck={false}
+                />
+              </div>
+            </div>
+          )}
           <div className="flex flex-wrap gap-3">
             <button
               type="button"
-              onClick={handleParse}
-              disabled={!pasteText.trim()}
+              onClick={activePasteMode === "table" ? handleParse : handleParseColumns}
+              disabled={activePasteMode === "table" ? !pasteText.trim() : !colRefNo.trim()}
               className="min-h-[44px] px-5 rounded-xl bg-admin-border text-slate-200 font-medium hover:bg-admin-border-light hover:text-white disabled:opacity-50 transition-colors"
             >
               Parse & Preview
             </button>
-            {parsed && parsed.length > 0 && (
+            {rowsToImport && rowsToImport.length > 0 && (
               <button
                 type="button"
                 onClick={handleImportPaste}
                 disabled={loading}
                 className="min-h-[44px] px-5 rounded-xl bg-admin-accent text-admin-bg font-semibold hover:bg-admin-accent-hover disabled:opacity-50 shadow-admin-glow transition-all"
               >
-                {loading ? "Importing..." : `Import ${parsed.length} row(s)`}
+                {loading ? "Importing..." : `Import ${rowsToImport.length} row(s)`}
               </button>
             )}
           </div>
 
-          {parseErrors.length > 0 && (
+          {(activePasteMode === "table" ? parseErrors : colParseErrors).length > 0 && (
             <div className="rounded-xl bg-amber-500/15 border border-amber-500/40 p-4">
               <div className="flex items-center gap-2 text-amber-400 font-medium mb-2">
                 <AlertCircle size={18} /> Warnings
               </div>
               <ul className="text-sm text-amber-300/90 list-disc list-inside space-y-0.5">
-                {parseErrors.slice(0, 8).map((err, i) => (
+                {(activePasteMode === "table" ? parseErrors : colParseErrors).slice(0, 8).map((err, i) => (
                   <li key={i}>{err}</li>
                 ))}
-                {parseErrors.length > 8 && <li>... and {parseErrors.length - 8} more</li>}
+                {(activePasteMode === "table" ? parseErrors : colParseErrors).length > 8 && (
+                  <li>... and {(activePasteMode === "table" ? parseErrors : colParseErrors).length - 8} more</li>
+                )}
               </ul>
             </div>
           )}
-          {parsed && parsed.length > 0 && (
+          {rowsToImport && rowsToImport.length > 0 && (
             <div className="rounded-xl border border-admin-border overflow-hidden bg-admin-bg/50">
               <div className="px-4 py-2 bg-admin-bg border-b border-admin-border text-xs font-medium text-admin-accent uppercase tracking-wide">
-                Preview · {parsed.length} row(s)
+                Preview · {rowsToImport.length} row(s)
               </div>
               <div className="overflow-x-auto max-h-[280px] overflow-y-auto">
                 <table className="w-full text-sm">
@@ -372,7 +564,7 @@ export default function BulkUploadPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-admin-border">
-                    {parsed.slice(0, 20).map((row, i) => (
+                    {rowsToImport.slice(0, 20).map((row, i) => (
                       <tr key={i} className="bg-admin-card/30">
                         {COLS.map((col) => (
                           <td key={col} className="px-3 py-2 text-slate-200 max-w-[140px] truncate">
@@ -384,9 +576,9 @@ export default function BulkUploadPage() {
                   </tbody>
                 </table>
               </div>
-              {parsed.length > 20 && (
+              {rowsToImport.length > 20 && (
                 <div className="px-4 py-2 bg-admin-bg border-t border-admin-border text-xs text-slate-500">
-                  Showing first 20 of {parsed.length} rows
+                  Showing first 20 of {rowsToImport.length} rows
                 </div>
               )}
             </div>

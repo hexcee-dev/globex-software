@@ -52,11 +52,11 @@ export async function POST(request: NextRequest) {
         errors.push(`Row ${i + 1}: invalid row`);
         continue;
       }
-      const refNo = r.refNo != null ? String(r.refNo).trim() || undefined : undefined;
-      const trackingRaw = r.trackingNumber != null ? String(r.trackingNumber).trim() : "";
+      let refNo = r.refNo != null ? String(r.refNo).trim() || undefined : undefined;
+      let trackingRaw = r.trackingNumber != null ? String(r.trackingNumber).trim() : "";
+      if (trackingRaw.toUpperCase() === "HOLD") trackingRaw = "";
       if (!trackingRaw && !refNo) {
-        errors.push(`Row ${i + 1}: REF NO (box number) or tracking number is required`);
-        continue;
+        refNo = "Third party";
       }
       let shipmentNumber = (overrides.shipmentName?.trim() || String(r.shipmentNumber ?? "").trim()) || "Unknown";
       const courierPartner = String(r.courierPartner ?? "").trim();
