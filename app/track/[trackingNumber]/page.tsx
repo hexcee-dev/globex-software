@@ -6,7 +6,7 @@ import NavBar from "@/app/components/NavBar";
 const WHATSAPP_NUMBER = "918086884456";
 const WHATSAPP_TRACKING_MSG = "Hi, I need help tracking my box. ";
 
-function formatDate(d: Date): string {
+function formatDate(d: Date | string): string {
   if (typeof d === "string") return d.slice(0, 10);
   return d.toISOString().slice(0, 10);
 }
