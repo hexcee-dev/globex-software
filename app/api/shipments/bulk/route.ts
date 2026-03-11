@@ -13,6 +13,8 @@ type ShipmentRow = {
   expectedDeliveryDate: string;
   refNo?: string;
   address?: string;
+  pcs?: string;
+  weight?: string;
   clearanceDate?: string;
   shipmentLabel?: string;
   deliveryPartnerLabel?: string;
@@ -59,11 +61,17 @@ export async function POST(request: NextRequest) {
         refNo = "Third party";
       }
       let shipmentNumber = (overrides.shipmentName?.trim() || String(r.shipmentNumber ?? "").trim()) || "Unknown";
-      const courierPartner = String(r.courierPartner ?? "").trim();
+      let courierPartner = String(r.courierPartner ?? "").trim();
+      if (courierPartner !== "Delhivery" && courierPartner !== "DP World") {
+        courierPartner = "Other";
+      }
       const shipmentDate = String(r.shipmentDate ?? "").trim() || DEFAULT_DATE;
       const expectedDeliveryDate = String(r.expectedDeliveryDate ?? "").trim() || shipmentDate;
       const currentStatus = String(r.currentStatus ?? "").trim() || "Booked";
       const trackingNumber = trackingRaw || (refNo ? `REF:${refNo}:${i}` : "");
+      if (!trackingRaw || trackingNumber.startsWith("REF:")) {
+        courierPartner = "Other";
+      }
       const deliveryPartnerLabel = overrides.deliveryPartner != null && String(overrides.deliveryPartner).trim() !== "" ? String(overrides.deliveryPartner).trim() : undefined;
       docs.push({
         shipmentNumber,
@@ -74,6 +82,8 @@ export async function POST(request: NextRequest) {
         expectedDeliveryDate,
         refNo,
         address: r.address != null ? String(r.address).trim() || undefined : undefined,
+        pcs: r.pcs != null ? String(r.pcs).trim() || undefined : undefined,
+        weight: r.weight != null ? String(r.weight).trim() || undefined : undefined,
         clearanceDate: overrides.clearanceDate != null && String(overrides.clearanceDate).trim() ? String(overrides.clearanceDate).trim() : (r.clearanceDate != null ? String(r.clearanceDate).trim() || undefined : undefined),
         shipmentLabel: overrides.shipment != null && String(overrides.shipment).trim() ? String(overrides.shipment).trim() : (r.shipmentLabel != null ? String(r.shipmentLabel).trim() || undefined : undefined),
         deliveryPartnerLabel,

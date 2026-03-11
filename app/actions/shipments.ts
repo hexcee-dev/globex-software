@@ -50,6 +50,8 @@ export type FullShipmentInfo = {
   deliveredDate?: string;
   address?: string;
   notes?: string;
+  pcs?: string;
+  weight?: string;
   clearanceDate?: string;
   shipmentLabel?: string;
   deliveryPartnerLabel?: string;
@@ -74,6 +76,8 @@ export async function getFullShipmentInfoByBoxNumber(
     deliveredDate: doc.deliveredDate ? (doc.deliveredDate instanceof Date ? doc.deliveredDate.toISOString().slice(0, 10) : String(doc.deliveredDate)) : undefined,
     address: doc.address ?? undefined,
     notes: doc.notes ?? undefined,
+    pcs: doc.pcs ?? undefined,
+    weight: doc.weight ?? undefined,
     clearanceDate: doc.clearanceDate ?? undefined,
     shipmentLabel: doc.shipmentLabel ?? undefined,
     deliveryPartnerLabel: doc.deliveryPartnerLabel ?? undefined,

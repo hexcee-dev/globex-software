@@ -5,6 +5,8 @@ import { ClipboardPaste, FileSpreadsheet, CheckCircle, AlertCircle } from "lucid
 
 const COLS = [
   "refNo",
+  "pcs",
+  "weight",
   "shipmentNumber",
   "courierPartner",
   "shipmentDate",
@@ -108,7 +110,9 @@ function parsePaste(text: string): { rows: Record<string, string>[]; errors: str
     idxCarrierDate = -1,
     idxDocketNo = -1,
     idxShipment = -1,
-    idxAddress = -1;
+    idxAddress = -1,
+    idxPcs = -1,
+    idxWeight = -1;
 
   if (isYourFormat && first.length >= 4) {
     startIndex = 1;
@@ -117,6 +121,8 @@ function parsePaste(text: string): { rows: Record<string, string>[]; errors: str
       idxCarrierDate = 2;
       idxDocketNo = 3;
       idxAddress = 6;
+      idxPcs = 1;
+      idxWeight = first.length >= 10 ? 9 : -1;
       idxShipment = first.length >= 11 ? 10 : 0;
     } else {
       firstNorm.forEach((h, i) => {
@@ -130,6 +136,8 @@ function parsePaste(text: string): { rows: Record<string, string>[]; errors: str
         if (h.includes("docket")) idxDocketNo = i;
         if (h.includes("shipment")) idxShipment = i;
         if (h.includes("address")) idxAddress = i;
+        if (h === "pcs" || h.includes("pcs")) idxPcs = i;
+        if (h.includes("weight")) idxWeight = i;
       });
       if (idxCarrierDate === -1) idxCarrierDate = 2;
       if (idxDocketNo === -1) idxDocketNo = 3;
@@ -180,6 +188,8 @@ function parsePaste(text: string): { rows: Record<string, string>[]; errors: str
     if (!shipmentNumber) shipmentNumber = "RAUFF AIR 110";
 
     const addressVal = isYourFormat && idxAddress >= 0 ? (row[idxAddress] || "").trim() : "";
+    const pcsVal = isYourFormat && idxPcs >= 0 ? (row[idxPcs] || "").trim() : "";
+    const weightVal = isYourFormat && idxWeight >= 0 ? (row[idxWeight] || "").trim() : "";
     rows.push({
       shipmentNumber,
       courierPartner,
@@ -189,6 +199,8 @@ function parsePaste(text: string): { rows: Record<string, string>[]; errors: str
       expectedDeliveryDate,
       refNo: refNoVal || (trackingNumber ? "" : "Third party"),
       address: addressVal || "",
+      ...(pcsVal && { pcs: pcsVal }),
+      ...(weightVal && { weight: weightVal }),
     });
   }
   return { rows, errors };
@@ -558,7 +570,7 @@ export default function BulkUploadPage() {
                     <tr>
                       {COLS.map((c) => (
                         <th key={c} className="px-3 py-2 text-left font-medium text-slate-400">
-                          {c === "refNo" ? "REF NO" : c.replace(/([A-Z])/g, " $1").trim()}
+                          {c === "refNo" ? "REF NO" : c === "pcs" ? "PCS" : c === "weight" ? "Weight" : c.replace(/([A-Z])/g, " $1").trim()}
                         </th>
                       ))}
                     </tr>

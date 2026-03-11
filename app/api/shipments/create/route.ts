@@ -20,6 +20,8 @@ export async function POST(request: NextRequest) {
       expectedDeliveryDate,
       refNo,
       address,
+      pcs,
+      weight,
     } = body;
 
     if (
@@ -52,6 +54,8 @@ export async function POST(request: NextRequest) {
       expectedDeliveryDate,
       refNo: refNo != null ? String(refNo).trim() || undefined : undefined,
       address: address != null ? String(address).trim() || undefined : undefined,
+      pcs: pcs != null ? String(pcs).trim() || undefined : undefined,
+      weight: weight != null ? String(weight).trim() || undefined : undefined,
     });
 
     return NextResponse.json({

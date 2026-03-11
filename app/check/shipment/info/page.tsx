@@ -5,14 +5,15 @@ import { getFullShipmentInfoByBoxNumber, type FullShipmentInfo } from "@/app/act
 
 function ShipmentInfoBlock({ shipment }: { shipment: FullShipmentInfo }) {
   const rows: { label: string; value: string | undefined }[] = [
-    { label: "_id", value: shipment._id },
     { label: "Shipment name", value: shipment.shipmentNumber },
     { label: "Shipment (label)", value: shipment.shipmentLabel },
+    { label: "Ref No / Box number", value: shipment.refNo },
+    { label: "PCS", value: shipment.pcs },
+    { label: "Weight", value: shipment.weight },
     { label: "Courier partner", value: shipment.courierPartner },
     { label: "Delivery partner (info)", value: shipment.deliveryPartnerLabel },
     { label: "Tracking number", value: shipment.trackingNumber },
     { label: "Tracking URL", value: shipment.trackingUrl },
-    { label: "Ref No / Box number", value: shipment.refNo },
     { label: "Current status", value: shipment.currentStatus },
     { label: "Shipment date", value: shipment.shipmentDate },
     { label: "Expected delivery date", value: shipment.expectedDeliveryDate },

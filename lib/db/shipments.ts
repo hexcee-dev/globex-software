@@ -42,6 +42,8 @@ type RefDoc = Document & {
   deliveredDate?: Date;
   address?: string;
   notes?: string;
+  pcs?: string;
+  weight?: string;
   createdAt: Date;
 };
 
@@ -59,6 +61,8 @@ const RefSchema = new Schema<RefDoc>(
     deliveredDate: { type: Date },
     address: { type: String },
     notes: { type: String },
+    pcs: { type: String },
+    weight: { type: String },
     createdAt: { type: Date, default: Date.now },
   },
   { collection: "refs" }
@@ -112,6 +116,8 @@ export type ShipmentRecord = {
   deliveredDate?: Date;
   address?: string;
   notes?: string;
+  pcs?: string;
+  weight?: string;
   clearanceDate?: string;
   shipmentLabel?: string;
   deliveryPartnerLabel?: string;
@@ -132,6 +138,8 @@ type RefLike = {
   deliveredDate?: Date;
   address?: string;
   notes?: string;
+  pcs?: string;
+  weight?: string;
 };
 
 type ShipmentInfo = {
@@ -157,6 +165,8 @@ function mapRefToRecord(ref: RefLike, shipment: ShipmentLike): ShipmentRecord {
     deliveredDate: ref.deliveredDate ?? undefined,
     address: ref.address ?? undefined,
     notes: ref.notes ?? undefined,
+    pcs: ref.pcs ?? undefined,
+    weight: ref.weight ?? undefined,
     clearanceDate: shipment?.clearanceDate ?? undefined,
     shipmentLabel: shipment?.shipmentLabel ?? undefined,
     deliveryPartnerLabel: shipment?.deliveryPartnerLabel ?? undefined,
@@ -296,6 +306,8 @@ export async function create(data: {
   refNo?: string;
   address?: string;
   notes?: string;
+  pcs?: string;
+  weight?: string;
   clearanceDate?: string;
   shipmentLabel?: string;
   deliveryPartnerLabel?: string;
@@ -325,6 +337,8 @@ export async function create(data: {
       createdAt: new Date(),
       address: data.address?.trim() || undefined,
       notes: data.notes?.trim() || undefined,
+      pcs: data.pcs?.trim() || undefined,
+      weight: data.weight?.trim() || undefined,
     });
     return mapRefToRecord(ref as unknown as RefLike, shipment as ShipmentInfo);
   } catch (e: unknown) {
@@ -423,6 +437,8 @@ export async function insertMany(
     refNo?: string;
     address?: string;
     notes?: string;
+    pcs?: string;
+    weight?: string;
     clearanceDate?: string;
     shipmentLabel?: string;
     deliveryPartnerLabel?: string;
@@ -460,6 +476,8 @@ export async function insertMany(
       createdAt: new Date(),
       address: row.address ?? undefined,
       notes: row.notes ?? undefined,
+      pcs: row.pcs?.trim() || undefined,
+      weight: row.weight?.trim() || undefined,
     });
     added++;
   }
